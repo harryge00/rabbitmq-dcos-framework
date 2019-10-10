@@ -94,7 +94,7 @@
                 },
                 "mem":{
                     "title":"Memory size (MB)",
-                    "description":"XXX. Fix me - ROOT support only. Template pod mem requirements (in MB)",
+                    "description":"Template pod mem requirements (in MB)",
                     "type":"integer",
                     "default":1024
                 },

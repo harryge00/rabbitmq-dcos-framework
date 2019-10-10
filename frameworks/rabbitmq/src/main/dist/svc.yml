@@ -50,7 +50,7 @@ pods:
         goal: RUNNING
         resource-set: nodes        
         cmd: |
-          chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX} && /usr/local/bin/docker-entrypoint.sh rabbitmq-server
+          export RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST}; chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX} && /usr/local/bin/docker-entrypoint.sh rabbitmq-server
 
         env:
           RABBITMQ_CFG_CLUSTER_NAME: {{ RABBITMQ_CFG_CLUSTER_NAME }}
@@ -61,16 +61,21 @@ pods:
 
           RABBITMQ_DEFAULT_PASS: {{RABBITMQ_DEFAULT_PASS}}
           RABBITMQ_DEFAULT_USER: {{RABBITMQ_DEFAULT_USER}}
+          RABBITMQ_GENERATED_CONFIG_DIR: {{MESOS_SANDBOX}}/rabbitmq-data/config
+          RABBITMQ_MNESIA_BASE: {{MESOS_SANDBOX}}/rabbitmq-data/mnesia
+          RABBITMQ_SCHEMA_DIR: {{MESOS_SANDBOX}}/rabbitmq-data/schema
+          RABBITMQ_NODE_COUNT: {{RABBITMQ_RES_COUNT}}
+
           TASK_MEM: {{RABBITMQ_RES_MEM}}
 
         readiness-check:
-          cmd: rabbitmq-diagnostics status
+          cmd: rabbitmq-diagnostics status > /dev/null
           interval: 5
           delay: 0
           timeout: 10
 
         health-check:
-          cmd: rabbitmq-diagnostics status
+          cmd: rabbitmq-diagnostics status > /dev/null
           interval: 120
           grace-period: 30
           max-consecutive-failures: 3

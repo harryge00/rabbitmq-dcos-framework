@@ -232,6 +232,9 @@ rabbit_set_config() {
 
 	local sedKey="$(sed_escape_lhs "$key")"
 	local sedVal="$(sed_escape_rhs "$val")"
+	
+	echo "s/^[[:space:]]*(${sedKey}[[:space:]]*=[[:space:]]*)\S.*\$/\1${sedVal}/"
+
 	sed -ri \
 		"s/^[[:space:]]*(${sedKey}[[:space:]]*=[[:space:]]*)\S.*\$/\1${sedVal}/" \
 		"$newConfigFile"
@@ -400,6 +403,19 @@ if [ "$haveSslConfig" ] && [ -f "$combinedSsl" ]; then
 	sslErlArgs="-pa $ERL_SSL_PATH -proto_dist inet_tls -ssl_dist_opt server_certfile $combinedSsl -ssl_dist_opt server_secure_renegotiate true client_secure_renegotiate true"
 	export RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="${RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS:-} $sslErlArgs"
 	export RABBITMQ_CTL_ERL_ARGS="${RABBITMQ_CTL_ERL_ARGS:-} $sslErlArgs"
+fi
+
+if [ "$RABBITMQ_NODE_COUNT" -gt 0 ]; then
+	# If the cluster has multiple servers, we have to use "Peer Discovery"
+ 	echo "Forming a ${RABBITMQ_NODE_COUNT}-node cluster through classic config"
+ 	rabbit_set_config "cluster_formation.peer_discovery_backend" "rabbit_peer_discovery_classic_config"
+ 	cat /etc/rabbitmq/rabbitmq.conf
+
+ 	for ((serverIndex=0;serverIndex<$RABBITMQ_NODE_COUNT;serverIndex++));
+	do
+		echo "$serverIndex"
+		rabbit_set_config "cluster_formation.classic_config.nodes.${serverIndex}" "rabbitmq-${serverIndex}-server.${FRAMEWORK_HOST}"
+	done
 fi
 
 exec "$@"
