@@ -1,0 +1,189 @@
+name: {{SERVICE_NAME}}
+web-url: "http://rabbitmq-0-node.{{SERVICE_NAME}}.mesos:{{RABBITMQ_CFG_MGMT_PORT}}"
+scheduler:
+  principal: {{SERVICE_PRINCIPAL}}
+  user: {{SERVICE_USER}}
+pods:
+  rabbitmq:
+    count: {{RABBITMQ_RES_COUNT}}
+    uris:
+      - {{BOOTSTRAP_URI}}
+    image: "{{RABBITMQ_RES_DOCKER_IMAGE}}"
+    {{#ENABLE_VIRTUAL_NETWORK}}
+    networks:
+      {{VIRTUAL_NETWORK_NAME}}:
+        labels: {{VIRTUAL_NETWORK_PLUGIN_LABELS}}
+    {{/ENABLE_VIRTUAL_NETWORK}}
+    placement: '{{{RABBITMQ_RES_PLACEMENT}}}'
+
+    resource-sets:
+      nodes:
+        cpus: {{RABBITMQ_RES_CPUS}}
+        memory: {{RABBITMQ_RES_MEM}}
+        volume:
+          path: rabbitmq-data
+          type: {{ RABBITMQ_RES_DISK_TYPE}}
+          size: {{ RABBITMQ_RES_DISK }}
+        ports:
+          epmd:
+            port: {{ RABBITMQ_CFG_NODE_EPMD_PORT }}
+          amqp:
+            port: {{ RABBITMQ_CFG_NODE_AMQP_PORT }}
+            advertise: true
+            vip:
+              prefix: amqp
+              port: {{ RABBITMQ_CFG_NODE_AMQP_PORT }}
+          management:
+            port: {{ RABBITMQ_CFG_MGMT_PORT }}
+            advertise: true
+            vip:
+              prefix: management
+              port: {{ RABBITMQ_CFG_MGMT_PORT }}
+          distribution:
+            port: {{ RABBITMQ_CFG_NODE_DIST_PORT }}
+      side-cars:
+        cpus: 0.1
+        memory: 512      
+
+    tasks:
+      server:
+        goal: RUNNING
+        resource-set: nodes        
+        cmd: |
+          chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX} && /usr/local/bin/docker-entrypoint.sh rabbitmq-server
+
+        env:
+          RABBITMQ_CFG_CLUSTER_NAME: {{ RABBITMQ_CFG_CLUSTER_NAME }}
+          RABBITMQ_DIST_PORT: {{RABBITMQ_CFG_NODE_DIST_PORT}}
+          RABBITMQ_CFG_MGMT_PORT: {{RABBITMQ_CFG_MGMT_PORT}}
+          RABBITMQ_NODE_PORT: {{RABBITMQ_CFG_NODE_AMQP_PORT}}
+          RABBITMQ_ERLANG_COOKIE: {{RABBITMQ_CFG_ERLANG_COOKIE}}
+
+          RABBITMQ_DEFAULT_PASS: {{RABBITMQ_DEFAULT_PASS}}
+          RABBITMQ_DEFAULT_USER: {{RABBITMQ_DEFAULT_USER}}
+          TASK_MEM: {{RABBITMQ_RES_MEM}}
+
+        readiness-check:
+          cmd: rabbitmq-diagnostics status
+          interval: 5
+          delay: 0
+          timeout: 10
+
+        health-check:
+          cmd: rabbitmq-diagnostics status
+          interval: 120
+          grace-period: 30
+          max-consecutive-failures: 3
+          delay: 0
+          timeout: 10
+
+      backup-definitions:
+        goal: FINISH
+        resource-set: side-cars
+        env:
+          RABBITMQ_CFG_MGMT_PORT: {{RABBITMQ_CFG_MGMT_PORT}}
+        cmd: |
+          set -e
+          SCHEME=http
+          curl ${SCHEME}://${USER}:${PASSWORD}@${MESOS_CONTAINER_IP}:${RABBITMQ_CFG_MGMT_PORT}/api/definitions > ${MESOS_SANDBOX}/shared/definitions_${BACKUP_ID}.json
+
+      restore-definitions:
+        goal: FINISH
+        resource-set: side-cars
+        env:
+          RABBITMQ_CFG_MGMT_PORT: {{RABBITMQ_CFG_MGMT_PORT}}
+        cmd: |
+          set -e
+          SCHEME=http
+          curl -X POST -H "Content-Type: application/json" ${SCHEME}://${USER}:${PASSWORD}@${MESOS_CONTAINER_IP}:${RABBITMQ_CFG_MGMT_PORT}/api/definitions -d@${MESOS_SANDBOX}/shared/definitions_${BACKUP_ID}.json
+
+      upload-definitions-s3:
+        goal: FINISH
+        resource-set: side-cars
+        cmd: |
+          set -e
+          s3cmd  --access_key=${AWS_ACCESS_KEY} \
+                 --secret_key=${AWS_SECRET_KEY} \
+                 --region=${AWS_REGION} \
+                 put ${MESOS_SANDBOX}/shared/definitions_${BACKUP_ID}.json \
+                 s3://${S3_BUCKET_NAME}/${S3_KEY_PREFIX}/definitions_${BACKUP_ID}.json
+
+      restore-definitions-s3:
+        goal: FINISH
+        resource-set: side-cars
+        cmd: |
+          set -e
+          s3cmd  --access_key=${AWS_ACCESS_KEY} \
+                 --secret_key=${AWS_SECRET_KEY} \
+                 --region=${AWS_REGION} \
+                 get s3://${S3_BUCKET_NAME}/${S3_KEY_PREFIX}/definitions_${BACKUP_ID}.json \
+                 ${MESOS_SANDBOX}/shared/definitions_${BACKUP_ID}.json
+
+      definitions-cleanup:
+        goal: FINISH
+        resource-set: side-cars
+        cmd: rm -f ${MESOS_SANDBOX}/shared/definitions_${BACKUP_ID}.json
+
+plans:
+  deploy:
+    strategy: serial
+    phases:
+      node-deploy:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[server]]
+  replace:
+    strategy: serial
+    phases:
+      node-deploy:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[server]]
+  update:
+    strategy: serial
+    phases:
+      node-deploy:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[server]]
+
+  backup-definitions-s3:
+    strategy: serial
+    phases:
+      backup-definitions:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[backup-definitions]]
+      upload-definitions-s3:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[upload-definitions-s3]]
+      definitions-cleanup:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[definitions-cleanup]]
+
+  restore-definitions-s3:
+    strategy: serial
+    phases:
+      restore-definitions-s3:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[restore-definitions-s3]]
+      restore-definition:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[restore-definitions]]
+      definitions-cleanup:
+        strategy: serial
+        pod: rabbitmq
+        steps:
+          - default: [[definitions-cleanup]]

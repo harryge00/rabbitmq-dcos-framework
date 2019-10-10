@@ -1,0 +1,15 @@
+{
+  "packagingVersion": "4.0",
+  "upgradesFrom": ["{{upgrades-from}}"],
+  "downgradesTo": ["{{downgrades-to}}"],
+  "minDcosReleaseVersion": "1.12",
+  "name": "rabbitmq",
+  "version": "0.1.0-3.7.17",
+  "maintainer": "hge@d2iq.com",
+  "description": "Rabbitmq cluster on DC/OS",
+  "selected": false,
+  "framework": true,
+  "tags": ["0.1.0", "rabbitmq"],
+  "postInstallNotes": "DC/OS rabbitmq is being installed!\n\n\tDocumentation: {{documentation-path}}\n\tIssues: {{issues-path}}",
+  "postUninstallNotes": "DC/OS rabbitmq is being uninstalled."
+}

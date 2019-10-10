@@ -1,0 +1,42 @@
+group 'com.mesosphere.sdk'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven {
+        url "https://downloads.mesosphere.com/maven/"
+    }
+    maven {
+        url "https://downloads.mesosphere.com/maven-snapshot/"
+    }
+}
+
+ext {
+    junitVer = "4.12"
+    systemRulesVer = "1.16.0"
+    mockitoVer = "2.10.0"
+    dcosSDKVer = "0.56.3"
+    dockerImageName = "rabbitmq"
+    dockerImageVersion = "3.7.17-management"
+}
+
+dependencies {
+    compile "mesosphere:scheduler:${dcosSDKVer}"
+    testCompile "mesosphere:testing:${dcosSDKVer}"
+    testCompile "junit:junit:${junitVer}"
+    testCompile "org.mockito:mockito-core:${mockitoVer}"
+}
+
+distributions {
+    main {
+        baseName = 'operator-scheduler'
+        applicationName = 'rabbitmq'
+        version = ''
+    }
+}
+
+mainClassName = 'com.mesosphere.sdk.operator.scheduler.Main'

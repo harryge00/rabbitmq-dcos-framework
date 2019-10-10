@@ -1,0 +1,61 @@
+{
+  "assets": {
+    "uris": {
+      "jre-tar-gz": "{{jre-url}}",
+      "libmesos-bundle-tar-gz": "{{libmesos-bundle-url}}",
+      "bootstrap-zip": "https://downloads.mesosphere.com/dcos-commons/artifacts/{{dcos-sdk-version}}/bootstrap.zip",
+      "scheduler-zip": "{{artifact-dir}}/operator-scheduler.zip",
+      "mc-uri": "https://dl.minio.io/client/mc/release/linux-amd64/mc"
+    },
+     "container": {
+      "docker": {
+        "rabbitmq": "rabbitmq:3.7.17-management"
+      }
+    }
+  },
+  "images": {
+    "icon-small": "https://github.com/rabbitmq/rabbitmq-website/blob/master/site/img/rabbitmq_logo_30x30.png?raw=true",
+    "icon-medium": "https://github.com/rabbitmq/rabbitmq-website/blob/master/site/img/rabbitmq_logo_30x30.png?raw=true",
+    "icon-large": "https://github.com/rabbitmq/rabbitmq-website/blob/master/site/img/rabbitmq_logo_30x30.png?raw=true"
+  },
+  "cli": {
+    "binaries": {
+      "darwin": {
+        "x86-64": {
+          "contentHash": [
+            {
+              "algo": "sha256",
+              "value": "{{sha256:dcos-service-cli-darwin}}"
+            }
+          ],
+          "kind": "executable",
+          "url": "{{artifact-dir}}/dcos-service-cli-darwin"
+        }
+      },
+      "linux": {
+        "x86-64": {
+          "contentHash": [
+            {
+              "algo": "sha256",
+              "value": "{{sha256:dcos-service-cli-linux}}"
+            }
+          ],
+          "kind": "executable",
+          "url": "{{artifact-dir}}/dcos-service-cli-linux"
+        }
+      },
+      "windows": {
+        "x86-64": {
+          "contentHash": [
+            {
+              "algo": "sha256",
+              "value": "{{sha256:dcos-service-cli.exe}}"
+            }
+          ],
+          "kind": "executable",
+          "url": "{{artifact-dir}}/dcos-service-cli.exe"
+        }
+      }
+    }
+  }
+}

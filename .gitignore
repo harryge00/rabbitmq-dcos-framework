@@ -1,0 +1,5 @@
+build
+dcos-service-cli*
+.gopath
+.DS_Store
+__pycache__
