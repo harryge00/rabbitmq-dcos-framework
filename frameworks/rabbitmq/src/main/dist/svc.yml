@@ -49,7 +49,7 @@ pods:
           export RABBITMQ_GENERATED_CONFIG_DIR=${MESOS_SANDBOX}/rabbitmq-data/config
           export RABBITMQ_MNESIA_BASE=${MESOS_SANDBOX}/rabbitmq-data/mnesia
           export RABBITMQ_SCHEMA_DIR=${MESOS_SANDBOX}/rabbitmq-data/schema
-          export RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST}
+          export RABBITMQ_NODENAME=${RABBITMQ_CFG_CLUSTER_NAME}@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST}
           chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX}
           /usr/local/bin/docker-entrypoint.sh rabbitmq-server
         env:
@@ -69,13 +69,13 @@ pods:
           TASK_MEM: {{RABBITMQ_RES_MEM}}
 
         readiness-check:
-          cmd: RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
+          cmd: RABBITMQ_NODENAME=${RABBITMQ_CFG_CLUSTER_NAME}@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
           interval: 5
           delay: 0
           timeout: 10
 
         health-check:
-          cmd: RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
+          cmd: RABBITMQ_NODENAME=${RABBITMQ_CFG_CLUSTER_NAME}@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
           interval: 120
           grace-period: 30
           max-consecutive-failures: 3
