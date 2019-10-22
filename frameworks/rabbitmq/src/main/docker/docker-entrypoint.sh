@@ -233,8 +233,6 @@ rabbit_set_config() {
 	local sedKey="$(sed_escape_lhs "$key")"
 	local sedVal="$(sed_escape_rhs "$val")"
 	
-	echo "s/^[[:space:]]*(${sedKey}[[:space:]]*=[[:space:]]*)\S.*\$/\1${sedVal}/"
-
 	sed -ri \
 		"s/^[[:space:]]*(${sedKey}[[:space:]]*=[[:space:]]*)\S.*\$/\1${sedVal}/" \
 		"$newConfigFile"
@@ -368,11 +366,12 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$shouldWriteConfig" ]; then
 	# if management plugin is installed, generate config for it
 	# https://www.rabbitmq.com/management.html#configuration
 	if [ "$(rabbitmq-plugins list -q -m -e rabbitmq_management)" ]; then
+		RABBITMQ_CFG_MGMT_PORT=${RABBITMQ_CFG_MGMT_PORT:-15672}
 		if [ "$haveManagementSslConfig" ]; then
 			rabbit_set_config 'management.ssl.port' 15671
 			rabbit_env_config 'management_ssl' "${sslConfigKeys[@]}"
 		else
-			rabbit_set_config 'management.tcp.port' 15672
+			rabbit_set_config 'management.tcp.port' "${RABBITMQ_CFG_MGMT_PORT}"
 		fi
 
 		# if definitions file exists, then load it
@@ -405,17 +404,24 @@ if [ "$haveSslConfig" ] && [ -f "$combinedSsl" ]; then
 	export RABBITMQ_CTL_ERL_ARGS="${RABBITMQ_CTL_ERL_ARGS:-} $sslErlArgs"
 fi
 
-if [ "$RABBITMQ_NODE_COUNT" -gt 0 ]; then
+RABBITMQ_NODE_COUNT=${RABBITMQ_NODE_COUNT:-1}
+if [ "$RABBITMQ_NODE_COUNT" -gt 1 ]; then
 	# If the cluster has multiple servers, we have to use "Peer Discovery"
  	echo "Forming a ${RABBITMQ_NODE_COUNT}-node cluster through classic config"
  	rabbit_set_config "cluster_formation.peer_discovery_backend" "rabbit_peer_discovery_classic_config"
- 	cat /etc/rabbitmq/rabbitmq.conf
-
  	for ((serverIndex=0;serverIndex<$RABBITMQ_NODE_COUNT;serverIndex++));
 	do
-		echo "$serverIndex"
-		rabbit_set_config "cluster_formation.classic_config.nodes.${serverIndex}" "rabbitmq-${serverIndex}-server.${FRAMEWORK_HOST}"
+		rabbit_set_config "cluster_formation.classic_config.nodes.${serverIndex}" "rabbit@rabbitmq-${serverIndex}-server.${FRAMEWORK_HOST}"
 	done
+	sleep $((RANDOM % 30))
 fi
+
+RABBITMQ_LOG_LEVEL=${RABBITMQ_LOG_LEVEL:-info}
+rabbit_set_config "log.console.level" "${RABBITMQ_LOG_LEVEL}"
+
+cat /etc/rabbitmq/rabbitmq.conf
+RABBITMQ_NODENAME=${RABBITMQ_NODENAME:-rabbit@$HOSTNAME}
+
+echo "RABBITMQ_NODENAME $RABBITMQ_NODENAME"
 
 exec "$@"
