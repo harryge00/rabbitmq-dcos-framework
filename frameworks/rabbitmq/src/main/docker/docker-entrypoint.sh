@@ -413,14 +413,24 @@ if [ "$RABBITMQ_NODE_COUNT" -gt 1 ]; then
 	do
 		rabbit_set_config "cluster_formation.classic_config.nodes.${serverIndex}" "rabbit@rabbitmq-${serverIndex}-server.${FRAMEWORK_HOST}"
 	done
-	sleep $((RANDOM % 30))
 fi
 
 RABBITMQ_LOG_LEVEL=${RABBITMQ_LOG_LEVEL:-info}
 rabbit_set_config "log.console.level" "${RABBITMQ_LOG_LEVEL}"
 
+RABBITMQ_NODENAME=${RABBITMQ_NODENAME:-}
+MESOS_TASK_ID=${MESOS_TASK_ID:-}
+if [ ! -z $MESOS_TASK_ID ] && [ -z $RABBITMQ_NODENAME ]; then
+	echo "Use Mesos DNS name as RABBITMQ_NODENAME"
+	MESOS_DNS_SUFFIX=${MESOS_DNS_SUFFIX:-marathon.autoip.dcos.thisdcos.directory}
+	TASK_ID=$(echo $MESOS_TASK_ID| cut -d'.' -f1)
+	RABBITMQ_CFG_CLUSTER_NAME=${RABBITMQ_CFG_CLUSTER_NAME:-rabbit}
+	RABBITMQ_NODENAME=${RABBITMQ_CFG_CLUSTER_NAME}@${TASK_ID}.${MESOS_DNS_SUFFIX}
+	echo NODENAME=$RABBITMQ_NODENAME >> /etc/rabbitmq/rabbitmq-env.conf
+	echo USE_LONGNAME=true >> /etc/rabbitmq/rabbitmq-env.conf
+fi
+
 cat /etc/rabbitmq/rabbitmq.conf
-RABBITMQ_NODENAME=${RABBITMQ_NODENAME:-rabbit@$HOSTNAME}
 
 echo "RABBITMQ_NODENAME $RABBITMQ_NODENAME"
 
