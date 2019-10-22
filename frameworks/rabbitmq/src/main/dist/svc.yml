@@ -6,8 +6,6 @@ scheduler:
 pods:
   rabbitmq:
     count: {{RABBITMQ_RES_COUNT}}
-    uris:
-      - {{BOOTSTRAP_URI}}
     image: "{{RABBITMQ_RES_DOCKER_IMAGE}}"
     {{#ENABLE_VIRTUAL_NETWORK}}
     networks:
@@ -32,15 +30,13 @@ pods:
             advertise: true
             vip:
               prefix: amqp
-              port: {{ RABBITMQ_CFG_NODE_AMQP_PORT }}
+              port: 5672
           management:
             port: {{ RABBITMQ_CFG_MGMT_PORT }}
             advertise: true
             vip:
               prefix: management
-              port: {{ RABBITMQ_CFG_MGMT_PORT }}
-          distribution:
-            port: {{ RABBITMQ_CFG_NODE_DIST_PORT }}
+              port: 15672
       side-cars:
         cpus: 0.1
         memory: 512      
@@ -50,32 +46,36 @@ pods:
         goal: RUNNING
         resource-set: nodes        
         cmd: |
-          export RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST}; chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX} && /usr/local/bin/docker-entrypoint.sh rabbitmq-server
-
+          export RABBITMQ_GENERATED_CONFIG_DIR=${MESOS_SANDBOX}/rabbitmq-data/config
+          export RABBITMQ_MNESIA_BASE=${MESOS_SANDBOX}/rabbitmq-data/mnesia
+          export RABBITMQ_SCHEMA_DIR=${MESOS_SANDBOX}/rabbitmq-data/schema
+          export RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST}
+          chown -R rabbitmq:rabbitmq ${MESOS_SANDBOX}
+          /usr/local/bin/docker-entrypoint.sh rabbitmq-server
         env:
           RABBITMQ_CFG_CLUSTER_NAME: {{ RABBITMQ_CFG_CLUSTER_NAME }}
           RABBITMQ_DIST_PORT: {{RABBITMQ_CFG_NODE_DIST_PORT}}
           RABBITMQ_CFG_MGMT_PORT: {{RABBITMQ_CFG_MGMT_PORT}}
           RABBITMQ_NODE_PORT: {{RABBITMQ_CFG_NODE_AMQP_PORT}}
           RABBITMQ_ERLANG_COOKIE: {{RABBITMQ_CFG_ERLANG_COOKIE}}
+          RABBITMQ_LOG_LEVEL: {{RABBITMQ_LOG_LEVEL}}
+          ERL_EPMD_PORT: {{RABBITMQ_CFG_NODE_EPMD_PORT}}
 
           RABBITMQ_DEFAULT_PASS: {{RABBITMQ_DEFAULT_PASS}}
           RABBITMQ_DEFAULT_USER: {{RABBITMQ_DEFAULT_USER}}
-          RABBITMQ_GENERATED_CONFIG_DIR: {{MESOS_SANDBOX}}/rabbitmq-data/config
-          RABBITMQ_MNESIA_BASE: {{MESOS_SANDBOX}}/rabbitmq-data/mnesia
-          RABBITMQ_SCHEMA_DIR: {{MESOS_SANDBOX}}/rabbitmq-data/schema
           RABBITMQ_NODE_COUNT: {{RABBITMQ_RES_COUNT}}
-
+          RABBITMQ_USE_LONGNAME: "true"
+    
           TASK_MEM: {{RABBITMQ_RES_MEM}}
 
         readiness-check:
-          cmd: rabbitmq-diagnostics status > /dev/null
+          cmd: RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
           interval: 5
           delay: 0
           timeout: 10
 
         health-check:
-          cmd: rabbitmq-diagnostics status > /dev/null
+          cmd: RABBITMQ_NODENAME=rabbit@rabbitmq-${POD_INSTANCE_INDEX}-server.${FRAMEWORK_HOST} rabbitmq-diagnostics status > /dev/null
           interval: 120
           grace-period: 30
           max-consecutive-failures: 3

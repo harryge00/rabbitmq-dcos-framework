@@ -9,7 +9,7 @@
     },
      "container": {
       "docker": {
-        "rabbitmq": "rabbitmq:3.7.17-management"
+        "rabbitmq": "hyge/rabbitmq:3.7.17-management"
       }
     }
   },

@@ -118,7 +118,7 @@
                     "title":"Docker image",
                     "description":"docker image to use",
                     "type":"string",
-                    "default":"rabbitmq:3.7.17-management"
+                    "default":"hyge/rabbitmq:3.7.17-management"
                 },
                 "placement_constraint": {
                   "title": "Placement constraint",
@@ -159,7 +159,7 @@
                     "title":"Cluster Name",
                     "description":"[UNIMPLEMENTED] set the cluster name",
                     "type":"string",
-                    "default":"rabbitmq-cluster"
+                    "default":"rabbit"
                 },
                 "erlang_cookie":{
                     "title":"Erlang cookie",
@@ -190,6 +190,17 @@
                     "description":"The default admin username",
                     "type":"string",
                     "default":"admin"
+                },
+                "log_level":{
+                    "description":"The log level for the rabbitmq server.",
+                    "type":"string",
+                    "enum":[
+                        "error",
+                        "warning",
+                        "info",
+                        "debug"
+                    ],
+                    "default":"info"
                 }
                 
             },
