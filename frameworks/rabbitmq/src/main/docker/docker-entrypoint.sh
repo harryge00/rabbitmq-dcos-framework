@@ -430,6 +430,8 @@ if [ ! -z $MESOS_TASK_ID ] && [ -z $RABBITMQ_NODENAME ]; then
 	echo USE_LONGNAME=true >> /etc/rabbitmq/rabbitmq-env.conf
 fi
 
+epmd -daemon
+
 cat /etc/rabbitmq/rabbitmq.conf
 
 echo "RABBITMQ_NODENAME $RABBITMQ_NODENAME"
